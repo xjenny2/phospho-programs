@@ -6,8 +6,6 @@ import sys
 import time
 def find_freq(protein_name, motif_list):
 
-
-
     # Opens sequence file and finds amino acid location of any matches to the motif
     canonical_id = gnomad.get_canonical_id(protein_name)
     tries = 0
@@ -20,6 +18,7 @@ def find_freq(protein_name, motif_list):
             sys.exit()
         tries += 1
 
+    # get sequence
     matches = []
     sequence = ensembl.get_sequence(canonical_id)
     triesSeq = 0
@@ -32,6 +31,8 @@ def find_freq(protein_name, motif_list):
             sys.exit()
         triesSeq += 1
     sequence = sequence.replace("\n", "")
+
+    #get list of locations that match motif
     for motif in motif_list:
         name = motif[0]
         fullMotif = motif[1]
@@ -43,9 +44,9 @@ def find_freq(protein_name, motif_list):
                     if (aaIndex == phosphoAA.start()):
                         isSite = True
                 matches.append([name, match.start() + aaIndex + 1, match.group()[aaIndex], isSite])
-
     print("Matches found")
 
+    # get all mutations available in gnomad
     mutations = gnomad.get_variants(canonical_id)
     triesMut = 0
     while mutations == "error":
@@ -57,6 +58,7 @@ def find_freq(protein_name, motif_list):
             sys.exit()
         triesMut += 1
 
+    # return allele freqs for the locations that match the motif
     results = []  # final results
     for match in matches:
         matchPattern = re.compile(r'(?<=p.[A-Z][a-z]{2})' + str(match[1]) + '(?=[A-Z][a-z]+)')  # AA change/place
