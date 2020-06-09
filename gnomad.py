@@ -13,11 +13,12 @@ def get_canonical_id(gene_name):
         print("Canonical ID retrieved:" + res.json()['data']['gene']['canonical_transcript_id'])
         return res.json()['data']['gene']['canonical_transcript_id']
     else:
-        return {'data': 'error'}
+        res.raise_for_status()
+        return "error"
 
 
 def get_variants(transcript_id):
-    print("\nSearching for variants...")
+    print("Searching for variants...")
     query = """
     {
         transcript(transcript_id: "%s") {
@@ -58,8 +59,13 @@ def get_variants(transcript_id):
                 else:
                     ac_genome = 0
                     an_genome = 0
-                result['af'] = (ac_exome + ac_genome) / (an_exome + an_genome)
+                if an_exome == 0 and an_genome == 0:
+                    result ['af'] = 0
+                    print("Error: exome/genome values at " + consequence)
+                else:
+                    result['af'] = (ac_exome + ac_genome) / (an_exome + an_genome)
                 results.append(result)
         return results
     else:
-        return {'data': 'error'}
+        res.raise_for_status()
+        return "error"

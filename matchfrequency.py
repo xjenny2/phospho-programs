@@ -1,55 +1,81 @@
 import re
 import gnomad
 import ensembl
-
-def find_freq(protein_name, patternlist):
+import csv
+import sys
+import time
+def find_freq(protein_name, motif_list):
 
 
 
     # Opens sequence file and finds amino acid location of any matches to the motif
     canonical_id = gnomad.get_canonical_id(protein_name)
+    tries = 0
+    while canonical_id == "error":
+        print("Error, retrying")
+        time.sleep(1)
+        canonical_id = gnomad.get_canonical_id(protein_name)
+        if tries > 10:
+            print("Gnomad Canonical ID connection error")
+            sys.exit()
+        tries += 1
 
     matches = []
-    seq = ensembl.get_sequence(canonical_id)
-    for l in patternlist:
-        name = l[0]
-        pattern = l[1]
-        site = l[2]
-        for match in re.finditer(pattern, seq):
-            # for x in range(match.start(), match.end()):
-            #     isSite = False
-            #     if (site_atm.search(match.group()).start() + match.start() == x):
-            #         isSite = True
-            #     matches.append([x + 1, match.group()[x-match.start()], isSite])
-            for x in range(0, len(match.group())):
+    sequence = ensembl.get_sequence(canonical_id)
+    triesSeq = 0
+    while sequence == "error":
+        print("Error, retrying")
+        time.sleep(1)
+        sequence = ensembl.get_sequence(canonical_id)
+        if triesSeq > 10:
+            print("Ensembl Connection error")
+            sys.exit()
+        triesSeq += 1
+    sequence = sequence.replace("\n", "")
+    for motif in motif_list:
+        name = motif[0]
+        fullMotif = motif[1]
+        site = motif[2]
+        for match in re.finditer(fullMotif, sequence):
+            for aaIndex in range(0, len(match.group())):
                 isSite = False
-                if (re.search(site, match.group()).start() == x):
-                    isSite = True
-                matches.append([name, match.start() + x + 1, match.group()[x], isSite])
+                for phosphoAA in re.finditer(site, match.group()):
+                    if (aaIndex == phosphoAA.start()):
+                        isSite = True
+                matches.append([name, match.start() + aaIndex + 1, match.group()[aaIndex], isSite])
 
-    print("\nMatches found: ")
-    print(matches)
+    print("Matches found")
 
     mutations = gnomad.get_variants(canonical_id)
+    triesMut = 0
+    while mutations == "error":
+        print("Error, retrying")
+        time.sleep(1)
+        mutations = gnomad.get_variants(canonical_id)
+        if triesMut > 10:
+            print("Gnomad Mutations Connection error")
+            sys.exit()
+        triesMut += 1
 
     results = []  # final results
     for match in matches:
-        match_pattern = re.compile(r'(?<=p.[A-Z][a-z]{2})' + str(match[1]) + '(?=[A-Z][a-z]+)')  # AA change/place
-        has_match = False
+        matchPattern = re.compile(r'(?<=p.[A-Z][a-z]{2})' + str(match[1]) + '(?=[A-Z][a-z]+)')  # AA change/place
+        hasMatch = False
         for mutation in mutations:
             consequence = mutation.get('consequence')
             af = mutation.get('af')
-            m = match_pattern.search(consequence)
+            m = matchPattern.search(consequence)
             if m:
-                results.append([match[0], match[1], af, match[3]])  # [location, frequency]
-                has_match = True
-        if not has_match:
-            results.append([match[0], match[1], 0, match[3]])  # appends 0 for frequency if there is no match
+                results.append([protein_name, match[0], match[1], af, match[3]])  # [location, frequency]
+                hasMatch = True
+        if not hasMatch:
+            results.append([protein_name, match[0], match[1], 0, match[3]])  # appends 0 for frequency if there is no match
     print("Results found")
     return(results)
 
 
 if __name__ == '__main__':
     name = input("Enter the name of the protein: ")
-    patternList = [["ATM", "SQ", "S(?=Q)"], ["DNAPK", "P[ST][A-Z]", "(?<=P)[ST](?=[A-Z])"]]
-    print(find_freq(name, patternList))
+    with open('/Users/jennyxu/Desktop/phospho-files/motifs_test.txt') as p:
+        patternList = list(csv.reader(p, delimiter='\t'))
+        print(find_freq(name, patternList))
