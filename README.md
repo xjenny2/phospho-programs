@@ -11,3 +11,4 @@ This is a series of programs used to find the mutation frequency at phosphorylat
 - [analysis.py](analysis.py): Removes all instances with an allele freq of 0
 - [normalfrequencies.py](normalfrequencies.py): Retrieves all variants for a particular substrate in gnomAD
 - [removeDuplicates.py]: Removes any duplicate instances of a variant for a substrate (i.e. if two kinases phosphorylated the same spot, it would remove the second instance)
+- [motifs](motifs): List of phosphorylation motifs used in my project.
